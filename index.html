@@ -1,0 +1,959 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ブロックス 21 - HTML5 Edition</title>
+    <style>
+        :root {
+            --cell-size: 24px;
+            --p1-color: #3b82f6;
+            /* Blue */
+            --p2-color: #eab308;
+            /* Yellow */
+            --p3-color: #ef4444;
+            /* Red */
+            --p4-color: #22c55e;
+            /* Green */
+            --bg-gradient: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            --glass-bg: rgba(255, 255, 255, 0.7);
+            --glass-border: 1px solid rgba(255, 255, 255, 0.4);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+
+        body {
+            font-family: 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Yu Gothic', Meiryo, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: var(--bg-gradient);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+            color: #333;
+            user-select: none;
+        }
+
+        /* --- Components --- */
+
+        .glass-panel {
+            background: var(--glass-bg);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: var(--glass-border);
+            border-radius: 16px;
+            box-shadow: var(--shadow-md);
+            padding: 20px;
+        }
+
+        button {
+            background: linear-gradient(to bottom, #ffffff, #f1f5f9);
+            border: 1px solid #cbd5e1;
+            padding: 10px 16px;
+            border-radius: 8px;
+            font-weight: 600;
+            color: #475569;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+            font-family: inherit;
+        }
+
+        button:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            background: #fff;
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* --- Layout --- */
+
+        h1 {
+            margin: 15px 0 10px;
+            font-weight: 800;
+            color: #1e293b;
+            text-shadow: 0 1px 1px rgba(255, 255, 255, 0.5);
+        }
+
+        #app-container {
+            display: flex;
+            gap: 25px;
+            height: 85vh;
+            max-width: 1200px;
+            width: 95%;
+            justify-content: center;
+        }
+
+        /* Game Board */
+        #board-area {
+            display: none;
+            /* Hidden on setup */
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #board {
+            display: grid;
+            grid-template-columns: repeat(20, var(--cell-size));
+            grid-template-rows: repeat(20, var(--cell-size));
+            gap: 2px;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.5);
+            border-radius: 8px;
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+
+        .cell {
+            width: var(--cell-size);
+            height: var(--cell-size);
+            background-color: #e2e8f0;
+            border-radius: 4px;
+            transition: background-color 0.2s, transform 0.1s;
+        }
+
+        /* Players Pieces on Board */
+        .cell.p0 {
+            background-color: var(--p1-color);
+            box-shadow: inset 0 -2px 2px rgba(0, 0, 0, 0.2);
+        }
+
+        .cell.p1 {
+            background-color: var(--p2-color);
+            box-shadow: inset 0 -2px 2px rgba(0, 0, 0, 0.2);
+        }
+
+        .cell.p2 {
+            background-color: var(--p3-color);
+            box-shadow: inset 0 -2px 2px rgba(0, 0, 0, 0.2);
+        }
+
+        .cell.p3 {
+            background-color: var(--p4-color);
+            box-shadow: inset 0 -2px 2px rgba(0, 0, 0, 0.2);
+        }
+
+        .cell.valid-hover {
+            background-color: rgba(100, 100, 100, 0.2) !important;
+            transform: scale(0.9);
+            border: 2px dashed #666;
+        }
+
+        .cell.invalid-hover {
+            background-color: rgba(255, 50, 50, 0.3) !important;
+        }
+
+        /* Sidebar */
+        #sidebar {
+            width: 340px;
+            display: none;
+            /* Hidden on setup */
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        #status-bar {
+            text-align: center;
+            padding: 15px;
+        }
+
+        #current-player {
+            font-size: 1.2rem;
+            font-weight: bold;
+            padding: 8px;
+            border-radius: 6px;
+            color: white;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+            margin-bottom: 8px;
+            transition: background-color 0.3s;
+        }
+
+        #game-message {
+            min-height: 1.2em;
+            color: #64748b;
+            font-weight: 500;
+        }
+
+        /* Pieces List */
+        #pieces-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        h3 {
+            margin: 0 0 10px;
+            font-size: 1rem;
+            color: #475569;
+        }
+
+        #pieces-container {
+            flex: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-wrap: wrap;
+            align-content: flex-start;
+            gap: 12px;
+            padding: 5px;
+        }
+
+        .piece-preview {
+            display: grid;
+            gap: 1px;
+            padding: 8px;
+            border-radius: 6px;
+            cursor: grab;
+            transition: transform 0.1s, background-color 0.2s;
+        }
+
+        .piece-preview:hover {
+            background-color: rgba(255, 255, 255, 0.6);
+            transform: scale(1.05);
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+        }
+
+        .piece-preview:active {
+            cursor: grabbing;
+        }
+
+        .mini-cell {
+            width: 12px;
+            height: 12px;
+            border-radius: 2px;
+        }
+
+        .mini-cell.filled {
+            box-shadow: inset 0 -1px 1px rgba(0, 0, 0, 0.2);
+        }
+
+        #controls {
+            display: flex;
+            justify-content: space-around;
+            padding-top: 10px;
+            border-top: 1px solid #e2e8f0;
+        }
+
+        /* Setup Screen */
+        #setup-screen {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            animation: fadeIn 0.5s ease;
+        }
+
+        .setup-card {
+            width: 450px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .setup-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.5);
+            border-radius: 8px;
+        }
+
+        .setup-col {
+            display: flex;
+            gap: 10px;
+        }
+
+        select {
+            padding: 5px 10px;
+            border-radius: 4px;
+            border: 1px solid #cbd5e1;
+            background: white;
+            font-family: inherit;
+        }
+
+        .start-btn {
+            width: 100%;
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            color: white;
+            font-size: 1.1rem;
+            padding: 15px;
+            border: none;
+            margin-top: 10px;
+        }
+
+        .start-btn:hover {
+            background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 6px rgba(59, 130, 246, 0.3);
+        }
+
+        /* Modal Overlay */
+        #modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(5px);
+            z-index: 100;
+            justify-content: center;
+            align-items: center;
+            animation: fadeIn 0.3s;
+        }
+
+        #modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 16px;
+            width: 400px;
+            text-align: center;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+        }
+
+        .score-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px;
+            border-bottom: 1px solid #f1f5f9;
+            font-size: 1.1rem;
+        }
+
+        .winner-badge {
+            background: #ffd700;
+            color: #854d0e;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            margin-left: 5px;
+            opacity: 0;
+        }
+
+        .winner .winner-badge {
+            opacity: 1;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <h1>ブロックス 21</h1>
+
+    <div id="app-container">
+
+        <!-- Setup Screen -->
+        <div id="setup-screen">
+            <div class="glass-panel setup-card">
+                <h2 style="text-align:center; margin-top:0;">ゲーム設定</h2>
+                <div id="player-config"></div>
+                <button class="start-btn" onclick="startGame()">ゲーム開始</button>
+            </div>
+        </div>
+
+        <!-- Game Area -->
+        <div id="board-area">
+            <div id="board"></div>
+        </div>
+
+        <div id="sidebar">
+            <div id="status-bar" class="glass-panel">
+                <div id="current-player">Player 1</div>
+                <div id="game-message">準備完了</div>
+            </div>
+
+            <div id="pieces-area" class="glass-panel">
+                <h3>持ち駒</h3>
+                <div id="pieces-container"></div>
+                <div id="controls">
+                    <button onclick="rotatePiece(-1)" title="左回転">↺</button>
+                    <button onclick="rotatePiece(1)" title="右回転">↻</button>
+                    <button onclick="flipPiece()" title="反転">⇄</button>
+                    <button onclick="passTurn()" id="btn-pass" style="color:#eab308; border-color:#eab308;">パス</button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Modal -->
+    <div id="modal-overlay">
+        <div id="modal-content">
+            <h2 id="modal-title">ゲーム終了</h2>
+            <div id="score-list"></div>
+            <button class="start-btn" onclick="location.reload()" style="margin-top:20px;">もう一度遊ぶ</button>
+        </div>
+    </div>
+
+    <script>
+        /** 21 Piece Definitions */
+        const ALL_PIECES = [
+            { id: 1, points: [[0, 0]] },
+            { id: 2, points: [[0, 0], [1, 0]] },
+            { id: 3, points: [[0, 0], [1, 0], [2, 0]] },
+            { id: 4, points: [[0, 0], [0, 1], [1, 0]] },
+            { id: 5, points: [[0, 0], [1, 0], [2, 0], [3, 0]] },
+            { id: 6, points: [[0, 0], [1, 0], [0, 1], [1, 1]] },
+            { id: 7, points: [[0, 0], [0, 1], [0, 2], [1, 0]] },
+            { id: 8, points: [[0, 0], [1, 0], [1, 1], [2, 1]] },
+            { id: 9, points: [[0, 0], [1, 0], [2, 0], [1, 1]] },
+            { id: 10, points: [[0, 0], [1, 0], [2, 0], [3, 0], [4, 0]] },
+            { id: 11, points: [[0, 0], [0, 1], [0, 2], [0, 3], [1, 0]] },
+            { id: 12, points: [[0, 0], [1, 0], [0, 1], [0, 2], [0, 3]] },
+            { id: 13, points: [[0, 0], [1, 0], [2, 0], [1, 1], [1, 2]] },
+            { id: 14, points: [[0, 0], [0, 1], [1, 1], [2, 0], [2, 1]] },
+            { id: 15, points: [[0, 0], [0, 1], [0, 2], [1, 2], [2, 2]] },
+            { id: 16, points: [[0, 0], [1, 1], [0, 1], [1, 2], [2, 2]] },
+            { id: 17, points: [[0, 0], [1, 0], [1, 1], [1, 2], [2, 2]] },
+            { id: 18, points: [[0, 1], [1, 1], [1, 0], [2, 0], [3, 0]] },
+            { id: 19, points: [[0, 0], [1, 0], [0, 1], [1, 1], [0, 2]] },
+            { id: 20, points: [[0, 0], [0, 1], [0, 2], [0, 3], [1, 1]] },
+            { id: 21, points: [[1, 0], [0, 1], [1, 1], [1, 2], [2, 2]] }
+        ];
+
+        const BOARD_SIZE = 20;
+        const COLORS = ['#3b82f6', '#eab308', '#ef4444', '#22c55e'];
+        const START_POSITIONS = [
+            { x: 0, y: 0 }, { x: BOARD_SIZE - 1, y: BOARD_SIZE - 1 }, { x: BOARD_SIZE - 1, y: 0 }, { x: 0, y: BOARD_SIZE - 1 }
+        ];
+
+        class Game {
+            constructor(playersConfig) {
+                this.board = Array(BOARD_SIZE).fill().map(() => Array(BOARD_SIZE).fill(-1));
+                this.players = playersConfig.map((cfg, idx) => ({
+                    id: idx,
+                    type: cfg.type,
+                    level: parseInt(cfg.level) || 1,
+                    color: COLORS[idx],
+                    pieces: [...ALL_PIECES],
+                    active: true,
+                    hasPassed: false
+                }));
+                this.turnIndex = 0;
+                this.globalOrientation = { rotation: 0, flipped: false };
+                this.dragState = null;
+                this.isProcessing = false;
+
+                this.initUI();
+                this.initControls();
+                this.startTurn();
+            }
+
+            initUI() {
+                const boardEl = document.getElementById('board');
+                boardEl.innerHTML = '';
+                boardEl.addEventListener('dragover', (e) => this.handleDragOver(e));
+                boardEl.addEventListener('drop', (e) => this.handleDrop(e));
+                boardEl.oncontextmenu = (e) => { e.preventDefault(); this.rotatePiece(1); return false; };
+
+                for (let y = 0; y < BOARD_SIZE; y++) {
+                    for (let x = 0; x < BOARD_SIZE; x++) {
+                        const cell = document.createElement('div');
+                        cell.className = 'cell';
+                        cell.dataset.x = x;
+                        cell.dataset.y = y;
+                        boardEl.appendChild(cell);
+                    }
+                }
+                this.renderBoard();
+                this.updatePieceList();
+            }
+
+            initControls() {
+                document.addEventListener('keydown', (e) => {
+                    if (this.currentPlayer.type !== 'human') return;
+                    if (e.code === 'ArrowRight') this.rotatePiece(1);
+                    else if (e.code === 'ArrowLeft') this.rotatePiece(-1);
+                    else if (['Space', 'ArrowUp', 'ArrowDown'].includes(e.code)) {
+                        e.preventDefault();
+                        this.flipPiece();
+                    }
+                });
+            }
+
+            get currentPlayer() { return this.players[this.turnIndex]; }
+
+            startTurn() {
+                if (this.players.every(p => p.hasPassed)) {
+                    this.endGame();
+                    return;
+                }
+
+                const player = this.currentPlayer;
+                this.updateStatus();
+                this.updatePieceList();
+
+                if (player.hasPassed) {
+                    this.showMessage("パス済みです");
+                    setTimeout(() => this.nextTurn(), 1000);
+                    return;
+                }
+
+                const canMove = this.checkAnyValidMove(player);
+                if (!canMove) {
+                    this.showMessage("置ける場所がありません。自動パスします。");
+                    setTimeout(() => this.passTurn(true), 1500);
+                    return;
+                }
+
+                if (player.type === 'npc') {
+                    this.isProcessing = true;
+                    this.showMessage("考え中...");
+                    setTimeout(() => this.runNPC(player), 500);
+                } else {
+                    this.isProcessing = false;
+                    this.showMessage("あなたの番です");
+                }
+            }
+
+            passTurn(auto = false) {
+                this.currentPlayer.hasPassed = true;
+                if (!auto) this.showMessage("パスしました");
+                this.nextTurn();
+            }
+
+            nextTurn() {
+                this.turnIndex = (this.turnIndex + 1) % this.players.length;
+                this.startTurn();
+            }
+
+            // --- Core Logic ---
+
+            getTransformedPoints(pieceId) {
+                const original = ALL_PIECES.find(p => p.id === pieceId);
+                if (!original) return [];
+                let points = original.points.map(p => [...p]);
+                if (this.globalOrientation.flipped) points = points.map(([x, y]) => [-x, y]);
+                for (let i = 0; i < this.globalOrientation.rotation; i++) points = points.map(([x, y]) => [-y, x]);
+                const minX = Math.min(...points.map(p => p[0]));
+                const minY = Math.min(...points.map(p => p[1]));
+                return points.map(([x, y]) => [x - minX, y - minY]);
+            }
+
+            rotatePiece(dir) {
+                let newRot = this.globalOrientation.rotation + dir;
+                if (newRot < 0) newRot = 3;
+                if (newRot > 3) newRot = 0;
+                this.globalOrientation.rotation = newRot;
+                this.updatePieceList();
+            }
+
+            flipPiece() {
+                this.globalOrientation.flipped = !this.globalOrientation.flipped;
+                this.updatePieceList();
+            }
+
+            handleDragStart(e, pieceId, anchorX, anchorY) {
+                if (this.currentPlayer.type !== 'human') { e.preventDefault(); return; }
+                this.dragState = { pieceId, anchor: { x: anchorX, y: anchorY } };
+                e.dataTransfer.setData('text/plain', pieceId);
+                e.dataTransfer.effectAllowed = 'move';
+            }
+
+            handleDragOver(e) {
+                if (!this.dragState) return;
+                e.preventDefault();
+                const target = e.target;
+                if (!target.classList.contains('cell')) return;
+
+                const tx = parseInt(target.dataset.x);
+                const ty = parseInt(target.dataset.y);
+                const ox = tx - this.dragState.anchor.x;
+                const oy = ty - this.dragState.anchor.y;
+
+                this.showGhost(this.dragState.pieceId, ox, oy);
+            }
+
+            handleDrop(e) {
+                e.preventDefault();
+                this.clearGhosts();
+
+                if (!this.dragState) return;
+                const target = e.target;
+                if (!target.classList.contains('cell')) return;
+
+                const tx = parseInt(target.dataset.x);
+                const ty = parseInt(target.dataset.y);
+                const ox = tx - this.dragState.anchor.x;
+                const oy = ty - this.dragState.anchor.y;
+
+                const points = this.getTransformedPoints(this.dragState.pieceId);
+
+                if (this.isValidMove(this.currentPlayer.id, points, ox, oy)) {
+                    this.placePiece(this.currentPlayer.id, points, ox, oy);
+                    this.removePieceFromInventory(this.currentPlayer, this.dragState.pieceId);
+                    this.dragState = null;
+                    this.nextTurn();
+                }
+            }
+
+            showGhost(pieceId, ox, oy) {
+                this.clearGhosts();
+                const points = this.getTransformedPoints(pieceId);
+                const isValid = this.isValidMove(this.currentPlayer.id, points, ox, oy);
+                const className = isValid ? 'valid-hover' : 'invalid-hover';
+                const boardCells = document.getElementById('board').children;
+                points.forEach(([px, py]) => {
+                    const bx = ox + px;
+                    const by = oy + py;
+                    if (bx >= 0 && bx < BOARD_SIZE && by >= 0 && by < BOARD_SIZE) {
+                        const idx = by * BOARD_SIZE + bx;
+                        boardCells[idx].classList.add(className);
+                    }
+                });
+            }
+
+            clearGhosts() {
+                const cells = document.querySelectorAll('.cell');
+                cells.forEach(c => c.classList.remove('valid-hover', 'invalid-hover'));
+            }
+
+            isValidMove(pid, points, ox, oy) {
+                for (const [px, py] of points) {
+                    const bx = ox + px; const by = oy + py;
+                    if (bx < 0 || bx >= BOARD_SIZE || by < 0 || by >= BOARD_SIZE) return false;
+                    if (this.board[by][bx] !== -1) return false;
+                }
+
+                let cornersConnecting = false;
+                const startPos = START_POSITIONS[pid];
+                let createsStart = false;
+
+                for (const [px, py] of points) {
+                    const bx = ox + px; const by = oy + py;
+                    if (bx === startPos.x && by === startPos.y) createsStart = true;
+
+                    const adjs = [[0, 1], [0, -1], [1, 0], [-1, 0]];
+                    for (const [nx, ny] of adjs) {
+                        const cx = bx + nx; const cy = by + ny;
+                        if (cx >= 0 && cx < BOARD_SIZE && cy >= 0 && cy < BOARD_SIZE) {
+                            if (this.board[cy][cx] === pid) return false;
+                        }
+                    }
+                    const corners = [[1, 1], [1, -1], [-1, 1], [-1, -1]];
+                    for (const [nx, ny] of corners) {
+                        const cx = bx + nx; const cy = by + ny;
+                        if (cx >= 0 && cx < BOARD_SIZE && cy >= 0 && cy < BOARD_SIZE) {
+                            if (this.board[cy][cx] === pid) cornersConnecting = true;
+                        }
+                    }
+                }
+                return (21 - this.currentPlayer.pieces.length === 0) ? createsStart : cornersConnecting;
+            }
+
+            checkAnyValidMove(player) {
+                if (player.pieces.length === 0) return false;
+                for (const piece of player.pieces) {
+                    const shapes = this.generateAllVariants(piece.points);
+                    for (const shape of shapes) {
+                        for (let y = 0; y < BOARD_SIZE; y++) {
+                            for (let x = 0; x < BOARD_SIZE; x++) {
+                                if (this.isValidMove(player.id, shape, x, y)) return true;
+                            }
+                        }
+                    }
+                }
+                return false;
+            }
+
+            placePiece(pid, points, ox, oy) {
+                points.forEach(([px, py]) => { this.board[oy + py][ox + px] = pid; });
+                this.renderBoard();
+            }
+
+            removePieceFromInventory(player, pieceId) {
+                const idx = player.pieces.findIndex(p => p.id === pieceId);
+                if (idx > -1) player.pieces.splice(idx, 1);
+            }
+
+            // --- Rendering ---
+
+            renderBoard() {
+                const cells = document.getElementById('board').children;
+                for (let y = 0; y < BOARD_SIZE; y++) {
+                    for (let x = 0; x < BOARD_SIZE; x++) {
+                        const idx = y * BOARD_SIZE + x;
+                        const val = this.board[y][x];
+                        cells[idx].className = 'cell';
+                        if (val !== -1) cells[idx].classList.add(`p${val}`);
+                    }
+                }
+            }
+
+            updatePieceList() {
+                const container = document.getElementById('pieces-container');
+                container.innerHTML = '';
+                if (this.currentPlayer.type !== 'human') return;
+
+                this.currentPlayer.pieces.forEach(p => {
+                    let points = this.getTransformedPoints(p.id);
+                    const el = document.createElement('div');
+                    el.className = 'piece-preview';
+                    el.draggable = true;
+
+                    const maxX = Math.max(...points.map(c => c[0]));
+                    const maxY = Math.max(...points.map(c => c[1]));
+                    el.style.gridTemplateColumns = `repeat(${maxX + 1}, 12px)`;
+                    el.style.gridTemplateRows = `repeat(${maxY + 1}, 12px)`;
+
+                    const map = Array(maxY + 1).fill().map(() => Array(maxX + 1).fill(0));
+                    points.forEach(([x, y]) => map[y][x] = 1);
+
+                    for (let r = 0; r <= maxY; r++) {
+                        for (let c = 0; c <= maxX; c++) {
+                            const cell = document.createElement('div');
+                            cell.className = 'mini-cell' + (map[r][c] ? ' filled' : '');
+                            if (map[r][c]) {
+                                cell.style.backgroundColor = this.currentPlayer.color;
+                                cell.onmousedown = (e) => { this.tempAnchor = { x: c, y: r }; };
+                            }
+                            el.appendChild(cell);
+                        }
+                    }
+                    el.ondragstart = (e) => {
+                        if (!this.tempAnchor) this.tempAnchor = { x: 0, y: 0 };
+                        this.handleDragStart(e, p.id, this.tempAnchor.x, this.tempAnchor.y);
+                    };
+                    container.appendChild(el);
+                });
+            }
+
+            updateStatus() {
+                const p = this.currentPlayer;
+                const el = document.getElementById('current-player');
+                el.style.backgroundColor = p.color;
+
+                let name = "";
+                if (p.type === 'human') {
+                    name = `プレイヤー ${p.id + 1}`;
+                } else {
+                    name = `CPU${p.id + 1} (Lv${p.level})`;
+                }
+
+                el.innerText = name;
+                document.getElementById('btn-pass').disabled = (p.type !== 'human');
+            }
+
+            showMessage(msg) {
+                document.getElementById('game-message').innerText = msg;
+            }
+
+            endGame() {
+                let scores = this.players.map(p => {
+                    let squares = p.pieces.reduce((acc, piece) => acc + piece.points.length, 0);
+                    return { id: p.id, score: -squares };
+                });
+                scores.sort((a, b) => b.score - a.score);
+
+                const modal = document.getElementById('modal-overlay');
+                const list = document.getElementById('score-list');
+                list.innerHTML = '';
+
+                scores.forEach((s, i) => {
+                    const div = document.createElement('div');
+                    div.className = 'score-row' + (i === 0 ? ' winner' : '');
+                    let pName = (this.players[s.id].type === 'human') ? `プレイヤー ${s.id + 1}` : `CPU${s.id + 1}`;
+                    div.innerHTML = `
+                <span>${pName}</span>
+                <span>${s.score} ${i === 0 ? '<span class="winner-badge">優勝!</span>' : ''}</span>
+            `;
+                    list.appendChild(div);
+                });
+
+                modal.style.display = 'flex';
+            }
+
+            // --- NPC Logic ---
+            runNPC(player) {
+                if (player.level === 3) {
+                    this.runNPC_Lv3(player); // Lv3: Strategist
+                } else if (player.level === 2) {
+                    this.runNPC_Lv2(player); // Lv2: Global Random
+                } else {
+                    this.runNPC_Lv1(player); // Lv1: Simple Random
+                }
+            }
+
+            // Helper: Find ALL valid moves for a player
+            getAllValidMoves(player) {
+                const validMoves = [];
+                for (const piece of player.pieces) {
+                    const shapes = this.generateAllVariants(piece.points);
+                    for (const shape of shapes) {
+                        for (let y = 0; y < BOARD_SIZE; y++) {
+                            for (let x = 0; x < BOARD_SIZE; x++) {
+                                if (this.isValidMove(player.id, shape, x, y)) {
+                                    validMoves.push({ pieceId: piece.id, points: shape, x: x, y: y });
+                                }
+                            }
+                        }
+                    }
+                }
+                return validMoves;
+            }
+
+            // Lv3: Strategist (Largest Piece + Expand)
+            runNPC_Lv3(player) {
+                const validMoves = this.getAllValidMoves(player);
+                if (validMoves.length === 0) {
+                    this.passTurn(true); return;
+                }
+
+                const startPos = START_POSITIONS[player.id];
+
+                // Scoring
+                validMoves.forEach(m => {
+                    let score = m.points.length * 100; // Priority 1: Size
+                    // Priority 2: Distance from start (Expansion)
+                    const dist = Math.abs(m.x - startPos.x) + Math.abs(m.y - startPos.y);
+                    score += dist;
+                    m.score = score;
+                });
+
+                // Pick Best
+                validMoves.sort((a, b) => b.score - a.score);
+
+                // Pick from top 3 for slight variety, or top 1 for pure strength
+                // Let's go purely strong
+                const move = validMoves[0];
+
+                this.placePiece(player.id, move.points, move.x, move.y);
+                this.removePieceFromInventory(player, move.pieceId);
+                this.nextTurn();
+            }
+
+            // Lv2: Global Random
+            runNPC_Lv2(player) {
+                const validMoves = this.getAllValidMoves(player);
+                if (validMoves.length === 0) {
+                    this.passTurn(true); return;
+                }
+                const move = validMoves[Math.floor(Math.random() * validMoves.length)];
+                this.placePiece(player.id, move.points, move.x, move.y);
+                this.removePieceFromInventory(player, move.pieceId);
+                this.nextTurn();
+            }
+
+            // Lv1: Simple Random
+            runNPC_Lv1(player) {
+                const shuffledPieces = [...player.pieces].sort(() => 0.5 - Math.random());
+                for (const piece of shuffledPieces) {
+                    const shapes = this.generateAllVariants(piece.points);
+                    shapes.sort(() => 0.5 - Math.random());
+                    const startX = Math.floor(Math.random() * BOARD_SIZE);
+                    const startY = Math.floor(Math.random() * BOARD_SIZE);
+                    for (const shape of shapes) {
+                        for (let dy = 0; dy < BOARD_SIZE; dy++) {
+                            for (let dx = 0; dx < BOARD_SIZE; dx++) {
+                                const x = (startX + dx) % BOARD_SIZE;
+                                const y = (startY + dy) % BOARD_SIZE;
+                                if (this.isValidMove(player.id, shape, x, y)) {
+                                    this.placePiece(player.id, shape, x, y);
+                                    this.removePieceFromInventory(player, piece.id);
+                                    this.nextTurn();
+                                    return;
+                                }
+                            }
+                        }
+                    }
+                }
+                // Fallback to exhaustive if heuristics fail but moves might exist
+                this.runNPC_Lv2(player);
+            }
+
+            generateAllVariants(points) {
+                const variants = [];
+                let curr = points;
+                for (let i = 0; i < 4; i++) { variants.push(curr); curr = this.rotatePoints(curr); }
+                let flipped = points.map(([x, y]) => [-x, y]);
+                flipped = this.normalize(flipped);
+                for (let i = 0; i < 4; i++) { variants.push(flipped); flipped = this.rotatePoints(flipped); }
+                return variants;
+            }
+            rotatePoints(points) {
+                let newP = points.map(([x, y]) => [-y, x]);
+                return this.normalize(newP);
+            }
+            normalize(points) {
+                const minX = Math.min(...points.map(p => p[0]));
+                const minY = Math.min(...points.map(p => p[1]));
+                return points.map(([x, y]) => [x - minX, y - minY]);
+            }
+        }
+
+        let gameInst = null;
+        function rotatePiece(dir) { if (gameInst) gameInst.rotatePiece(dir); }
+        function flipPiece() { if (gameInst) gameInst.flipPiece(); }
+        function passTurn() { if (gameInst) gameInst.passTurn(); }
+
+        function startGame() {
+            const players = [];
+            for (let i = 1; i <= 4; i++) {
+                const typeEl = document.getElementById(`p${i}-type`);
+                const levelEl = document.getElementById(`p${i}-level`);
+                const type = typeEl.value;
+                const level = (type === 'npc') ? parseInt(levelEl.value) : 1;
+                players.push({ type: type, level: level });
+            }
+            document.getElementById('setup-screen').style.display = 'none';
+            document.getElementById('board-area').style.display = 'flex';
+            document.getElementById('sidebar').style.display = 'flex';
+            gameInst = new Game(players);
+        }
+
+        function updateLevelSelect(i) {
+            const type = document.getElementById(`p${i}-type`).value;
+            const lvl = document.getElementById(`p${i}-level`);
+            lvl.style.display = (type === 'npc') ? 'inline-block' : 'none';
+        }
+
+        window.onload = () => {
+            const container = document.getElementById('player-config');
+            for (let i = 1; i <= 4; i++) {
+                const div = document.createElement('div');
+                div.className = 'setup-row';
+                div.innerHTML = `
+            <label style="font-weight:bold;">プレイヤー ${i}</label>
+            <div class="setup-col">
+                <select id="p${i}-type" onchange="updateLevelSelect(${i})">
+                    <option value="human">人間</option>
+                    <option value="npc" ${i > 1 ? 'selected' : ''}>CPU</option>
+                </select>
+                <select id="p${i}-level" style="display:${i > 1 ? 'inline-block' : 'none'}">
+                    <option value="1">Lv1</option>
+                    <option value="2">Lv2</option>
+                    <option value="3">Lv3</option>
+                </select>
+            </div>
+        `;
+                container.appendChild(div);
+            }
+        };
+    </script>
+</body>
+
+</html>
