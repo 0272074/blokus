@@ -1,0 +1,31 @@
+# 実装計画: SLIPEゲームのレイアウト修正
+
+## 目標
+4:3ディスプレイの端末などで、盤面が必要以上に小さく表示される問題を修正する。
+
+## 問題の原因
+現在の[resize()](file:///C:/Users/big_b/.gemini/antigravity/brain/3fc226d9-a5f1-4c85-9825-b33dfd3778bc/index.html#355-374)関数において、盤面のサイズを計算する際に `window.innerHeight * 0.55` (画面の高さの55%) という制限が設けられている。
+この制限により、ヘッダーやフッターの領域を除いた「実際に利用可能なスペース (`board-wrapper` のサイズ)」が十分にある場合でも、盤面が強制的に縮小されてしまっている。特に縦方向のスペースが貴重ではない（横幅に対して高さが十分にあるわけではない）4:3端末等でこの影響が顕著に出ていると考えられる。
+
+## 変更内容
+
+### index.html
+
+#### [MODIFY] resize関数
+盤面のサイズ計算ロジックを変更し、`window.innerHeight * 0.55` の制限を撤廃する。
+代わりに、`board-wrapper` (ヘッダーとフッターの間の領域) の幅と高さの小さい方に合わせて盤面サイズを決定するように変更する。
+
+```javascript
+// 変更前
+const size = Math.min(wrapper.clientWidth, Math.min(availHeight, window.innerHeight * 0.55));
+
+// 変更後
+const size = Math.min(wrapper.clientWidth, availHeight);
+```
+
+## 検証計画
+### 手動検証
+1. [index.html](file:///C:/Users/big_b/.gemini/antigravity/brain/3fc226d9-a5f1-4c85-9825-b33dfd3778bc/index.html) をブラウザで開く。
+2. ブラウザのデベロッパーツールを使用し、様々な端末サイズ（特に iPad などの 4:3 比率）で表示を確認する。
+3. 盤面が `board-wrapper` の領域を最大限利用して表示されていることを確認する。
+4. コントロールボタン（フッター）やヘッダーが隠れたり、レイアウトが崩れたりしていないか確認する。

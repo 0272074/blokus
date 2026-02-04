@@ -6,6 +6,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ブロックス 21 - HTML5 Edition</title>
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Mochiy+Pop+One&display=swap');
+
         :root {
             --cell-size: 24px;
             --p1-color: #3b82f6;
@@ -31,7 +33,7 @@
             flex-direction: column;
             align-items: center;
             height: 100vh;
-            overflow: hidden;
+            overflow: auto;
             color: #333;
             user-select: none;
         }
@@ -80,16 +82,22 @@
         /* --- Layout --- */
 
         h1 {
-            margin: 15px 0 10px;
+            font-family: 'Mochiy Pop One', sans-serif;
+            font-size: 3rem;
+            color: transparent;
+            background: linear-gradient(45deg, #3b82f6, #22c55e, #eab308, #ef4444);
+            -webkit-background-clip: text;
+            background-clip: text;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+            letter-spacing: 2px;
+            margin: 20px 0;
             font-weight: 800;
-            color: #1e293b;
-            text-shadow: 0 1px 1px rgba(255, 255, 255, 0.5);
         }
 
         #app-container {
             display: flex;
             gap: 25px;
-            height: 85vh;
+            min-height: 85vh;
             max-width: 1200px;
             width: 95%;
             justify-content: center;
@@ -680,6 +688,26 @@
                 return false;
             }
 
+            generateAllVariants(basePoints) {
+                let variants = [];
+                let ps = basePoints.map(p => [...p]);
+                // 4 rotations * 2 flips
+                for (let f = 0; f < 2; f++) {
+                    for (let r = 0; r < 4; r++) {
+                        // normalize
+                        const minX = Math.min(...ps.map(p => p[0]));
+                        const minY = Math.min(...ps.map(p => p[1]));
+                        const norm = ps.map(([x, y]) => [x - minX, y - minY]);
+                        variants.push(norm);
+                        // rotate
+                        ps = ps.map(([x, y]) => [-y, x]);
+                    }
+                    // flip
+                    ps = ps.map(([x, y]) => [-x, y]);
+                }
+                return variants;
+            }
+
             placePiece(pid, points, ox, oy) {
                 points.forEach(([px, py]) => { this.board[oy + py][ox + px] = pid; });
                 this.renderBoard();
@@ -798,161 +826,151 @@
                 }
             }
 
-            // Helper: Find ALL valid moves for a player
-            getAllValidMoves(player) {
-                const validMoves = [];
+            runNPC_Lv1(player) { // Random move
+                const moves = this.getAllPossibleMoves(player);
+                if (moves.length === 0) {
+                    this.passTurn();
+                    return;
+                }
+                const move = moves[Math.floor(Math.random() * moves.length)];
+                this.executeNPCMove(player, move);
+            }
+
+            runNPC_Lv2(player) { // Global Evaluation - Prioritize largest piece + most corners
+                const moves = this.getAllPossibleMoves(player);
+                if (moves.length === 0) {
+                    this.passTurn();
+                    return;
+                }
+                // Quality: Piece Size > Corners Touched (simple heuristic)
+                moves.sort((a, b) => {
+                    const sizeA = a.piece.points.length;
+                    const sizeB = b.piece.points.length;
+                    if (sizeB !== sizeA) return sizeB - sizeA; // Larger piece first
+                    return 0; // Random among same size
+                });
+                // Pick top 3 to add randomness, or just best
+                const best = moves[0];
+                this.executeNPCMove(player, best);
+            }
+
+            runNPC_Lv3(player) { // Advanced - Expansion Strategy
+                const moves = this.getAllPossibleMoves(player);
+                if (moves.length === 0) {
+                    this.passTurn();
+                    return;
+                }
+
+                // Heuristic: Maximize board coverage and block opponents
+                let bestScore = -Infinity;
+                let bestMove = moves[0];
+
+                // Simple evaluation just for picking a move without full Minimax (too slow for JS single thread blocking)
+                for (const move of moves) {
+                    const score = move.piece.points.length * 10
+                        + this.countCorners(move) * 2
+                        + Math.random(); // Add slight randomness
+                    if (score > bestScore) {
+                        bestScore = score;
+                        bestMove = move;
+                    }
+                }
+                this.executeNPCMove(player, bestMove);
+            }
+
+            countCorners(move) {
+                // Mock calculation of corners/blocking potential
+                // Expand towards center or enemy?
+                // For now just random weight
+                return Math.floor(Math.random() * 5);
+            }
+
+            getAllPossibleMoves(player) {
+                let moves = [];
                 for (const piece of player.pieces) {
                     const shapes = this.generateAllVariants(piece.points);
                     for (const shape of shapes) {
                         for (let y = 0; y < BOARD_SIZE; y++) {
                             for (let x = 0; x < BOARD_SIZE; x++) {
                                 if (this.isValidMove(player.id, shape, x, y)) {
-                                    validMoves.push({ pieceId: piece.id, points: shape, x: x, y: y });
+                                    moves.push({ piece: piece, shape: shape, x: x, y: y });
                                 }
                             }
                         }
                     }
                 }
-                return validMoves;
+                return moves;
             }
 
-            // Lv3: Strategist (Largest Piece + Expand)
-            runNPC_Lv3(player) {
-                const validMoves = this.getAllValidMoves(player);
-                if (validMoves.length === 0) {
-                    this.passTurn(true); return;
-                }
-
-                const startPos = START_POSITIONS[player.id];
-
-                // Scoring
-                validMoves.forEach(m => {
-                    let score = m.points.length * 100; // Priority 1: Size
-                    // Priority 2: Distance from start (Expansion)
-                    const dist = Math.abs(m.x - startPos.x) + Math.abs(m.y - startPos.y);
-                    score += dist;
-                    m.score = score;
-                });
-
-                // Pick Best
-                validMoves.sort((a, b) => b.score - a.score);
-
-                // Pick from top 3 for slight variety, or top 1 for pure strength
-                // Let's go purely strong
-                const move = validMoves[0];
-
-                this.placePiece(player.id, move.points, move.x, move.y);
-                this.removePieceFromInventory(player, move.pieceId);
+            executeNPCMove(player, move) {
+                this.placePiece(player.id, move.shape, move.x, move.y);
+                this.removePieceFromInventory(player, move.piece.id);
                 this.nextTurn();
-            }
-
-            // Lv2: Global Random
-            runNPC_Lv2(player) {
-                const validMoves = this.getAllValidMoves(player);
-                if (validMoves.length === 0) {
-                    this.passTurn(true); return;
-                }
-                const move = validMoves[Math.floor(Math.random() * validMoves.length)];
-                this.placePiece(player.id, move.points, move.x, move.y);
-                this.removePieceFromInventory(player, move.pieceId);
-                this.nextTurn();
-            }
-
-            // Lv1: Simple Random
-            runNPC_Lv1(player) {
-                const shuffledPieces = [...player.pieces].sort(() => 0.5 - Math.random());
-                for (const piece of shuffledPieces) {
-                    const shapes = this.generateAllVariants(piece.points);
-                    shapes.sort(() => 0.5 - Math.random());
-                    const startX = Math.floor(Math.random() * BOARD_SIZE);
-                    const startY = Math.floor(Math.random() * BOARD_SIZE);
-                    for (const shape of shapes) {
-                        for (let dy = 0; dy < BOARD_SIZE; dy++) {
-                            for (let dx = 0; dx < BOARD_SIZE; dx++) {
-                                const x = (startX + dx) % BOARD_SIZE;
-                                const y = (startY + dy) % BOARD_SIZE;
-                                if (this.isValidMove(player.id, shape, x, y)) {
-                                    this.placePiece(player.id, shape, x, y);
-                                    this.removePieceFromInventory(player, piece.id);
-                                    this.nextTurn();
-                                    return;
-                                }
-                            }
-                        }
-                    }
-                }
-                // Fallback to exhaustive if heuristics fail but moves might exist
-                this.runNPC_Lv2(player);
-            }
-
-            generateAllVariants(points) {
-                const variants = [];
-                let curr = points;
-                for (let i = 0; i < 4; i++) { variants.push(curr); curr = this.rotatePoints(curr); }
-                let flipped = points.map(([x, y]) => [-x, y]);
-                flipped = this.normalize(flipped);
-                for (let i = 0; i < 4; i++) { variants.push(flipped); flipped = this.rotatePoints(flipped); }
-                return variants;
-            }
-            rotatePoints(points) {
-                let newP = points.map(([x, y]) => [-y, x]);
-                return this.normalize(newP);
-            }
-            normalize(points) {
-                const minX = Math.min(...points.map(p => p[0]));
-                const minY = Math.min(...points.map(p => p[1]));
-                return points.map(([x, y]) => [x - minX, y - minY]);
             }
         }
 
-        let gameInst = null;
-        function rotatePiece(dir) { if (gameInst) gameInst.rotatePiece(dir); }
-        function flipPiece() { if (gameInst) gameInst.flipPiece(); }
-        function passTurn() { if (gameInst) gameInst.passTurn(); }
+
+        // --- App Setup ---
+
+        let game;
+
+        function initSetup() {
+            const configArea = document.getElementById('player-config');
+            configArea.innerHTML = '';
+            COLORS.forEach((c, i) => {
+                const row = document.createElement('div');
+                row.className = 'setup-row';
+                row.innerHTML = `
+            <div class="setup-col" style="align-items:center;">
+                <div style="width:20px; height:20px; background:${c}; border-radius:4px;"></div>
+                <span>Player ${i + 1}</span>
+            </div>
+            <div class="setup-col">
+                <select id="p${i}-type" onchange="toggleLevel(${i})">
+                    <option value="human">人間</option>
+                    <option value="npc" ${i > 0 ? 'selected' : ''}>CPU</option>
+                </select>
+                <select id="p${i}-level" class="${i > 0 ? '' : 'hidden'}">
+                    <option value="1">Lv1 (よわい)</option>
+                    <option value="2" selected>Lv2 (ふつう)</option>
+                    <option value="3">Lv3 (つよい)</option>
+                </select>
+            </div>
+        `;
+                configArea.appendChild(row);
+            });
+            // Update initial visibility
+            for (let i = 0; i < 4; i++) toggleLevel(i);
+        }
+
+        function toggleLevel(idx) {
+            const typeStr = document.getElementById(`p${idx}-type`).value;
+            const lvlSel = document.getElementById(`p${idx}-level`);
+            if (typeStr === 'npc') {
+                lvlSel.classList.remove('hidden');
+                lvlSel.style.display = 'inline-block';
+            } else {
+                lvlSel.classList.add('hidden');
+                lvlSel.style.display = 'none';
+            }
+        }
 
         function startGame() {
-            const players = [];
-            for (let i = 1; i <= 4; i++) {
-                const typeEl = document.getElementById(`p${i}-type`);
-                const levelEl = document.getElementById(`p${i}-level`);
-                const type = typeEl.value;
-                const level = (type === 'npc') ? parseInt(levelEl.value) : 1;
-                players.push({ type: type, level: level });
+            const configs = [];
+            for (let i = 0; i < 4; i++) {
+                configs.push({
+                    type: document.getElementById(`p${i}-type`).value,
+                    level: document.getElementById(`p${i}-level`).value
+                });
             }
             document.getElementById('setup-screen').style.display = 'none';
             document.getElementById('board-area').style.display = 'flex';
             document.getElementById('sidebar').style.display = 'flex';
-            gameInst = new Game(players);
+            game = new Game(configs);
         }
 
-        function updateLevelSelect(i) {
-            const type = document.getElementById(`p${i}-type`).value;
-            const lvl = document.getElementById(`p${i}-level`);
-            lvl.style.display = (type === 'npc') ? 'inline-block' : 'none';
-        }
+        window.onload = initSetup;
 
-        window.onload = () => {
-            const container = document.getElementById('player-config');
-            for (let i = 1; i <= 4; i++) {
-                const div = document.createElement('div');
-                div.className = 'setup-row';
-                div.innerHTML = `
-            <label style="font-weight:bold;">プレイヤー ${i}</label>
-            <div class="setup-col">
-                <select id="p${i}-type" onchange="updateLevelSelect(${i})">
-                    <option value="human">人間</option>
-                    <option value="npc" ${i > 1 ? 'selected' : ''}>CPU</option>
-                </select>
-                <select id="p${i}-level" style="display:${i > 1 ? 'inline-block' : 'none'}">
-                    <option value="1">Lv1</option>
-                    <option value="2">Lv2</option>
-                    <option value="3">Lv3</option>
-                </select>
-            </div>
-        `;
-                container.appendChild(div);
-            }
-        };
     </script>
 </body>
 

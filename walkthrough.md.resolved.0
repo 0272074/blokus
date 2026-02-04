@@ -1,0 +1,25 @@
+# SLIPEゲーム レイアウト修正 - Walkthrough
+
+## 実施した変更
+[resize()](file:///C:/Users/big_b/.gemini/antigravity/brain/3fc226d9-a5f1-4c85-9825-b33dfd3778bc/index.html#355-374) 関数において、盤面サイズの計算ロジックを変更しました。
+以前は `window.innerHeight * 0.55` という制限がありましたが、これを削除し、`board-wrapper` の領域に合わせて盤面が最大化されるようにしました。
+
+### 変更前
+```javascript
+const size = Math.min(wrapper.clientWidth, Math.min(availHeight, window.innerHeight * 0.55));
+```
+
+### 変更後
+```javascript
+const size = Math.min(wrapper.clientWidth, availHeight);
+```
+
+## 検証結果
+自動検証ツール（ブラウザ）の起動に失敗したため、スクリーンショットによる確認は行えていません。
+修正済みの [index.html](file:///C:/Users/big_b/.gemini/antigravity/brain/0baf58ad-e85e-4232-9a77-8402d51647e7/index.html) を以下の場所に保存しましたので、お手元のブラウザ（特に4:3比率の環境）で開き、盤面が期待通りに大きく表示されることをご確認ください。
+
+**保存先**: [C:\Users\big_b\.gemini\antigravity\brain\0baf58ad-e85e-4232-9a77-8402d51647e7\index.html](file:///C:/Users/big_b/.gemini/antigravity/brain/0baf58ad-e85e-4232-9a77-8402d51647e7/index.html)
+
+## 次のステップ
+- 保存された [index.html](file:///C:/Users/big_b/.gemini/antigravity/brain/0baf58ad-e85e-4232-9a77-8402d51647e7/index.html) を元のディレクトリに上書きコピーしてください。
+- 各種画面サイズで表示崩れがないか念の為ご確認ください。

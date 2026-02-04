@@ -1,0 +1,48 @@
+# QUIXOゲーム レイアウト修正 - Walkthrough
+
+## 実施した変更
+[index.html](file:///C:/Users/big_b/.gemini/antigravity/brain/0baf58ad-e85e-4232-9a77-8402d51647e7/index.html) の CSS を修正し、以下の対応を行いました。
+
+1. **スクロールの許可**:
+   - `body` 要素の `overflow: hidden` を `overflow: auto` に変更しました。これにより、画面に収まりきらない場合でもスクロールして操作できるようになります。
+
+2. **盤面サイズの最適化**:
+   - `.board-recess` のサイズ指定を `85vmin` 固定から [min(85vmin, 60vh)](file:///C:/Users/big_b/.gemini/antigravity/brain/3fc226d9-a5f1-4c85-9825-b33dfd3778bc/index.html#627-668) に変更しました。
+   - これにより、iPad等の縦比率が高い端末でも、盤面が画面高さの60%を超えないようになり、ヘッダーやフッターの表示領域が確保されやすくなります。
+
+### 変更前
+```css
+body {
+    /* ... */
+    overflow: hidden;
+}
+
+.board-recess {
+    /* ... */
+    width: 85vmin;
+    height: 85vmin;
+    max-width: 500px;
+    max-height: 500px;
+}
+```
+
+### 変更後
+```css
+body {
+    /* ... */
+    overflow: auto;
+}
+
+.board-recess {
+    /* ... */
+    width: min(85vmin, 60vh);
+    height: min(85vmin, 60vh);
+    max-width: 500px;
+}
+```
+
+## 検証と適用
+修正済みのファイルは以下に保存されています。
+[C:\Users\big_b\.gemini\antigravity\brain\0baf58ad-e85e-4232-9a77-8402d51647e7\index.html](file:///C:/Users/big_b/.gemini/antigravity/brain/0baf58ad-e85e-4232-9a77-8402d51647e7/index.html)
+
+このファイルを元のディレクトリにある [index.html](file:///C:/Users/big_b/.gemini/antigravity/brain/0baf58ad-e85e-4232-9a77-8402d51647e7/index.html) に上書きして、実際の表示をご確認ください。

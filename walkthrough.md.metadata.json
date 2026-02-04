@@ -1,0 +1,6 @@
+{
+  "artifactType": "ARTIFACT_TYPE_WALKTHROUGH",
+  "summary": "Blokusゲームのレイアウト修正とデザイン改善内容\n`body` のスクロール許可によるレイアウト修正と、Google Fontsを使用したタイトルデザインの刷新を行いました。",
+  "updatedAt": "2026-02-02T21:29:18.932825100Z",
+  "version": "2"
+}

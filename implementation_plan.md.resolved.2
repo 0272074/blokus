@@ -1,0 +1,46 @@
+# 実装計画: Blokusゲームのレイアウト修正とデザイン改善
+
+## 目標
+1. 4:3ディスプレイ等で盤面下部が見切れる問題を修正する（スクロール可能にする）。
+2. タイトル「ブロックス 21」をよりデザイン性の高いものに変更する。
+
+## 問題の原因（レイアウト）
+- **`overflow: hidden`**: `body` 要素に設定されており、画面からはみ出したコンテンツが切り取られてしまう。
+- **高さ制限**: `#app-container` に `height: 85vh` が設定されており、内部コンテンツがこれを超えると意図しない表示になる可能性がある。
+
+## 修正内容
+
+### index.html
+
+#### [MODIFY] レイアウトとデザイン (CSS)
+1. **スクロールの許可**:
+   - `body` の `overflow: hidden` を `overflow: auto` (または `touch` 対応含め調整) に変更。
+   - `min-height: 100vh` は維持しつつ、コンテンツが増えたら伸びるようにする。
+
+2. **コンテナの高さ制限解除**:
+   - `#app-container` の `height: 85vh` を `min-height: 85vh` または `height: auto` に変更し、柔軟性を持たせる。
+
+3. **タイトルデザインの強化**:
+   - フォントの変更: Google Fonts から「Mochiy Pop One」や「Potta One」などのポップでゲームらしいフォント、あるいは「Zen Maru Gothic」などを導入。
+   - 装飾: テキストシャドウ、グラデーションカラー、レタースペーシングなどを追加し、ロゴっぽい見た目にする。
+
+```css
+/* Google Fonts 読み込み */
+@import url('https://fonts.googleapis.com/css2?family=Mochiy+Pop+One&display=swap');
+
+h1 {
+    font-family: 'Mochiy Pop One', sans-serif;
+    font-size: 3rem;
+    color: transparent;
+    background: linear-gradient(45deg, #3b82f6, #22c55e, #eab308, #ef4444);
+    -webkit-background-clip: text;
+    background-clip: text;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+    letter-spacing: 2px;
+    margin: 20px 0;
+}
+```
+
+## 検証計画
+- iPadサイズ (768x1024) 等で表示し、盤面全体が表示されるか、スクロールしてアクセスできるか確認する。
+- タイトルが装飾され、視認性とデザイン性が向上しているか確認する。
