@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ブロックス 21 - HTML5 Edition</title>
+    <title>BLOKUS 21 - HTML5 Edition</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Mochiy+Pop+One&display=swap');
 
@@ -160,6 +160,23 @@
 
         .cell.invalid-hover {
             background-color: rgba(255, 50, 50, 0.3) !important;
+        }
+
+        /* Start position markers */
+        .cell.start-p0 {
+            box-shadow: inset 0 0 0 3px var(--p1-color);
+        }
+
+        .cell.start-p1 {
+            box-shadow: inset 0 0 0 3px var(--p2-color);
+        }
+
+        .cell.start-p2 {
+            box-shadow: inset 0 0 0 3px var(--p3-color);
+        }
+
+        .cell.start-p3 {
+            box-shadow: inset 0 0 0 3px var(--p4-color);
         }
 
         /* Sidebar */
@@ -370,7 +387,7 @@
 
 <body>
 
-    <h1>ブロックス 21</h1>
+    <h1>BLOKUS 21</h1>
 
     <div id="app-container">
 
@@ -728,6 +745,13 @@
                         const val = this.board[y][x];
                         cells[idx].className = 'cell';
                         if (val !== -1) cells[idx].classList.add(`p${val}`);
+                        // Show start position markers
+                        for (let p = 0; p < START_POSITIONS.length; p++) {
+                            const sp = START_POSITIONS[p];
+                            if (x === sp.x && y === sp.y && this.board[y][x] === -1) {
+                                cells[idx].classList.add(`start-p${p}`);
+                            }
+                        }
                     }
                 }
             }
